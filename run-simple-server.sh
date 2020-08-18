@@ -27,18 +27,23 @@ done
 openssl pkcs7 -print_certs -inform der -in AllCerts.p7b -out CAs/AllCerts.pem
 rm AllCerts.p7b
 
-echo Create temporary root CA, intermediate CA, and server cert and key ...
-
-rm -fr intranet-test-certs
-git clone https://github.com/rlucente-se-jboss/intranet-test-certs.git \
-    &> /dev/null
-pushd intranet-test-certs &> /dev/null
-
-./02-create-root-pair.sh &> /dev/null
-./03-create-intermediate-pair.sh &> /dev/null
-./04-create-server-pair.sh &> /dev/null
-./05-create-client-pair.sh &> /dev/null
-./06-export-certs.sh &> /dev/null
+if [[ ! -e intranet-test-certs/server.p12 ]]
+then
+    echo Create temporary root CA, intermediate CA, and server cert and key ...
+    
+    rm -fr intranet-test-certs
+    git clone https://github.com/rlucente-se-jboss/intranet-test-certs.git \
+        &> /dev/null
+    pushd intranet-test-certs &> /dev/null
+    
+    ./02-create-root-pair.sh &> /dev/null
+    ./03-create-intermediate-pair.sh &> /dev/null
+    ./04-create-server-pair.sh &> /dev/null
+    ./05-create-client-pair.sh &> /dev/null
+    ./06-export-certs.sh &> /dev/null
+else
+    pushd intranet-test-certs &> /dev/null
+fi
 
 # set temporary import/export password
 echo 'admin1jboss!' > password.txt
@@ -64,9 +69,8 @@ then
 elif [[ "$(uname -s)" = "Linux" ]]
 then
     IPADDR=$(ip a s | grep 'inet [0-9]' | grep -v 127.0.0.1 | awk '{print $2; exit}' | cut -d/ -f1)
+    sudo firewall-cmd --add-port=8443/tcp
 fi
-
-sudo firewall-cmd --add-port=8443/tcp
 
 echo
 echo Server running at https://$IPADDR:8443/hello
